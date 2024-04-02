@@ -10,7 +10,6 @@ public class ValueToPercent : MonoBehaviour
     public List<float> percent;
     float totalValue = 0;
 
-
     public void GatherPercent()
     {
         totalValue = 0;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using System.Net.Http.Headers;
-using UnityEditor.UIElements;
 using UnityEngine;
 
 public class SpinWheel : MonoBehaviour
@@ -16,60 +15,44 @@ public class SpinWheel : MonoBehaviour
 
     float ZRot;
     [SerializeField]
-    float minSpeed, maxSpeed;
+    float minSpeed, maxSpeed, damping;
 
-    int timePassed = 0;
 
-    bool bIsSpun = false;
+    float spinSpeed;
 
     Vector3 pos;
+
+    Coroutine spinCoroutine;
 
     // Start is called before the first frame update
     void Start()
     {
         wheelManager = GetComponent<WheelManager>();
         fieldManager = GameObject.Find("Prompts").GetComponent<InputFieldManager>();
-        if(wheelManager == null || fieldManager == null)
+        if (wheelManager == null || fieldManager == null)
         {
             Debug.LogError("NULL");
         }
         fieldManager.PositiveIncrement += ResetWheel;
         fieldManager.NegativeIncrement += ResetWheel;
-        
+
         pos = transform.position;
         winnerText.SetActive(false);
 
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        if (bIsSpun == true)
-        {
-            winnerText.SetActive(false);
-            timePassed++;
-            float SpinSpeed = Random.Range(minSpeed, maxSpeed);
-            ZRot += SpinSpeed * Time.deltaTime;
-            Quaternion rot = new Quaternion(0, 0, ZRot, 0);
-            float num = Mathf.Cos(ZRot);
-            transform.Rotate(new Vector3(0, 0, num));
-
-            if (num <= 0)
-            {
-                bIsSpun = false;
-                Win();
-            }
-        }
-    }
-
     public void Spin()
     {
         ZRot = 0;
-        bIsSpun = true;
+        spinSpeed = Random.Range(minSpeed, maxSpeed);
+        StopCoroutine(WheelCoroutine());
+        spinCoroutine = StartCoroutine(WheelCoroutine());
+        //bIsSpun = true;
     }
 
     void Win()
     {
+        spinSpeed = 0;
         float rot = transform.rotation.eulerAngles.z;
         if (rot <= 0)
         {
@@ -97,7 +80,7 @@ public class SpinWheel : MonoBehaviour
         //}
         GameObject gO = wheelManager.GetAtAngle(num);
         winnerText.SetActive(true);
-        winnerText.GetComponent<TextMeshProUGUI>().SetText("Winner: " + gO.name);
+        winnerText.GetComponent<TextMeshProUGUI>().SetText(gO.name + " Wins");
         //Debug.Log("Difference: " + num);
         //Debug.Log(rot);
         //Debug.Log(gO);
@@ -106,7 +89,6 @@ public class SpinWheel : MonoBehaviour
     void ResetWheel()
     {
         ZRot = 0;
-        bIsSpun = false;
         Quaternion quat = new Quaternion(0, 0, 0, 0);
         transform.SetPositionAndRotation(pos, quat);
     }
@@ -115,5 +97,26 @@ public class SpinWheel : MonoBehaviour
     {
         fieldManager.PositiveIncrement -= ResetWheel;
         fieldManager.NegativeIncrement -= ResetWheel;
+    }
+
+    IEnumerator WheelCoroutine()
+    {
+        while (true)
+        {
+            winnerText.SetActive(false);
+            ZRot = spinSpeed * Time.deltaTime;
+            spinSpeed -= damping * Time.deltaTime;
+            transform.Rotate(new Vector3(0, 0, ZRot));
+
+            if (spinSpeed <= 0)
+            {
+                Win();
+                yield break;
+            }
+
+
+            yield return null;
+
+        }
     }
 }
